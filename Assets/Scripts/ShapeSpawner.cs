@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.InputSystem;
+using System.Drawing;
 
 [Serializable] public class Shapes
 {
@@ -18,6 +19,10 @@ using UnityEngine.InputSystem;
 public class ShapeSpawner : MonoBehaviour
 {
     public List<Shapes> squares;
+    public List<Shapes> queue;
+    public List<int> colors;
+    public List<int> toclear;
+    public List<int> cleared;
     public TileBase[] tiles;
     public Tilemap tilemap;
     public Tilemap tilemap2;
@@ -25,6 +30,8 @@ public class ShapeSpawner : MonoBehaviour
     InputAction rotateLeft;
     InputAction rotateRight;
     bool playerTurn = false;
+    const int totalColors = 5;
+    const int reqTiles = 4;
     int ticks = 0;
     float timer = 0f;
     float moveTimer = 0f;
@@ -132,6 +139,22 @@ public class ShapeSpawner : MonoBehaviour
         }
         
     }
+    public void PopulateQueue(int length)
+    {
+        while (queue.Count < length)
+        {
+            if (colors.Count <= 0)
+            {
+                for (int i = 0; i <= totalColors; i++)
+                {
+                    colors.Add(i);
+                }
+            }
+            int colorPick = UnityEngine.Random.Range(0, colors.Count);
+            queue.Add(new Shapes {color = colors[colorPick], category = 0, direction = UnityEngine.Random.Range(1, 4) });
+            colors.RemoveAt(colorPick);
+        }
+    }
     public void DrawBoard()
     {
         tilemap.ClearAllTiles();
@@ -143,6 +166,22 @@ public class ShapeSpawner : MonoBehaviour
                 if (tilemap.GetTile(ps) != null) tilemap.SetTile(ps, null);
             }
             else tilemap.SetTile(ps, tiles[squares[i].color + 1]);
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            tilemap.SetTile(new Vector3Int(i * 3 + 36, 17, 0), tiles[queue[i].color + 1]);
+            tilemap.SetTile(new Vector3Int(i * 3 + 36, 16, 0), tiles[queue[i].color + 1]);
+            switch (queue[i].direction)
+            {
+                case 2:
+                    tilemap.SetTile(new Vector3Int(i * 3 + 36, 18, 0), tiles[queue[i].color + 1]);
+                    break;
+                case 3:
+                    tilemap.SetTile(new Vector3Int(i * 3 + 37, 17, 0), tiles[queue[i].color + 1]);
+                    break;
+                default:
+                    break;
+            }
         }
         /*for (int i = -5; i < sizex + 5; i++)
         {
@@ -174,7 +213,7 @@ public class ShapeSpawner : MonoBehaviour
         {
             if (squares[i].pos == p) found = i;
         }
-        Debug.Log(found);
+        //Debug.Log(found);
         return found;
     }
     public Vector2Int FindRotate(Vector2Int mainPos, int sq, int dir) // 0 = left, 1 = right
@@ -249,26 +288,149 @@ public class ShapeSpawner : MonoBehaviour
             }
         }
     }
+    public void CheckClear()
+    {
+        if (toclear.Count >= reqTiles)
+        {
+            while (toclear.Count > 0)
+            {
+                if (!cleared.Contains(toclear[0])) cleared.Add(toclear[0]);
+                Debug.Log("added tile #" + toclear[0]);
+                toclear.RemoveAt(0);
+            }
+        }
+    }
+    public int CheckAcross(int color, int px, int py)
+    {
+        toclear.Clear();
+        int ct = 0;
+        int cc = color;
+        while (cc == color && cc >= 0 && ct <= 25 && FindPos(new Vector2Int(px + ct, py)) >= 0)
+        {
+            //if (FindPos(new Vector2Int(px + ct, py)) >= 0)
+            //{
+                cc = squares[FindPos(new Vector2Int(px + ct, py))].color;
+                toclear.Add(FindPos(new Vector2Int(px + ct, py)));
+                //Debug.Log("found tile #" + FindPos(new Vector2Int(px + ct, py)) + " across #" + ct);
+            //}
+            ct++;
+        }
+        CheckClear();
+        return cleared.Count;
+    }
+    public int CheckDown(int color, int px, int py)
+    {
+        toclear.Clear();
+        int ct = 0;
+        int cc = color;
+        while (cc == color && cc >= 0 && ct <= 25 && FindPos(new Vector2Int(px, py + ct)) >= 0)
+        {
+            //if (FindPos(new Vector2Int(px, py + ct)) >= 0)
+            //{
+                cc = squares[FindPos(new Vector2Int(px, py + ct))].color;
+                toclear.Add(FindPos(new Vector2Int(px, py + ct)));
+                //Debug.Log("found tile #" + FindPos(new Vector2Int(px, py + ct)) + " down #" + ct);
+            //}
+            ct++;
+        }
+        CheckClear();
+        return cleared.Count;
+    }
+    public int CheckDiagonalLeft(int color, int px, int py)
+    {
+        toclear.Clear();
+        int ct = 0;
+        int cc = color;
+        while (cc == color && cc >= 0 && ct <= 25)
+        {
+            if (FindPos(new Vector2Int(px + ct, py - ct)) >= 0)
+            {
+                cc = squares[FindPos(new Vector2Int(px + ct, py - ct))].color;
+                toclear.Add(FindPos(new Vector2Int(px + ct, py - ct)));
+            }
+            ct++;
+        }
+        CheckClear();
+        return cleared.Count;
+    }
+    public int CheckDiagonalRight(int color, int px, int py)
+    {
+        toclear.Clear();
+        int ct = 0;
+        int cc = color;
+        while (cc == color && cc >= 0 && ct <= 25)
+        {
+            if (FindPos(new Vector2Int(px + ct, py + ct)) >= 0)
+            {
+                cc = squares[FindPos(new Vector2Int(px + ct, py + ct))].color;
+                toclear.Add(FindPos(new Vector2Int(px + ct, py + ct)));
+            }
+            ct++;
+        }
+        CheckClear();
+        return cleared.Count;
+    }
+    public int CheckMatching()
+    {
+        int dx = -1;
+        int dy = -1;
+        int find = -1;
+        for (int x = 0; x <= sizex; x++)
+        {
+            for (int y = 0; y <= sizey; y++)
+            {
+                find = FindPos(new Vector2Int(x, y));
+                if (find >= 0)
+                {
+                    if (squares[find].color >= 0)
+                    {
+                        dx = squares[find].pos.x;
+                        dy = squares[find].pos.y;
+                        toclear.Clear();
+                        cleared.Clear();
+                        //if (
+                        CheckAcross(squares[find].color, dx, dy); // >= reqTiles; ||
+                        CheckDown(squares[find].color, dx, dy); // >= reqTiles ||
+                        //CheckDiagonalLeft(squares[find].color, dx, dy); // >= reqTiles ||
+                        //CheckDiagonalRight(squares[find].color, dx, dy); // >= reqTiles
+                            //)
+                        //{
+                            Debug.Log(cleared.Count + " tiles found");
+                        //}
+                        if (cleared.Count >= reqTiles) break;
+                    }
+                }
+            }
+            if (cleared.Count >= reqTiles) break;
+        }
+        return cleared.Count;
+    }
     public void SpawnSquares()
     {
-        int color = UnityEngine.Random.Range(0, 5);
-        int shape = UnityEngine.Random.Range(1, 4); // 1 = two bar, 2 = three bar, 3 = l shape
-        int dir = UnityEngine.Random.Range(0, 3); // 0 = down, 1 = left, 2 = up, 3 = right
-        Vector2Int[] positions = { new Vector2Int(12, 29), new Vector2Int(29, 12), new Vector2Int(12, -5), new Vector2Int(-5, 12) };
+        if (queue.Count <= 8) PopulateQueue(12);
+        else
+        {
+            int color = queue[0].color;
+            int shape = queue[0].direction; // 1 = two bar, 2 = three bar, 3 = l shape
+            int dir = queue.Count % 4; // 0 = down, 1 = left, 2 = up, 3 = right
+            Vector2Int[] positions = { new Vector2Int(12, 29), new Vector2Int(29, 12), new Vector2Int(12, -5), new Vector2Int(-5, 12) };
 
-        squares.Add(new Shapes { controlled = true, main = true, pos = positions[dir], color = color, category = 0, direction = dir });
-        squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x + 1, positions[dir].y), color = color, category = 0, direction = dir });
+            squares.Add(new Shapes { controlled = true, main = true, pos = positions[dir], color = color, category = 0, direction = dir });
+            squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x + 1, positions[dir].y), color = color, category = 0, direction = dir });
 
-        switch (shape) {
-            case 2:
-                squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x - 1, positions[dir].y), color = color, category = 0, direction = dir });
-                break;
-            case 3:
-                squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x, positions[dir].y + 1), color = color, category = 0, direction = dir });
-                break;
-            default:
-                break;
+            switch (shape) {
+                case 2:
+                    squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x - 1, positions[dir].y), color = color, category = 0, direction = dir });
+                    break;
+                case 3:
+                    squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x, positions[dir].y + 1), color = color, category = 0, direction = dir });
+                    break;
+                default:
+                    break;
+            }
+            queue.RemoveAt(0);
         }
+        
     }
     public void CheckControlledCollisions()
     {
@@ -314,9 +476,31 @@ public class ShapeSpawner : MonoBehaviour
             }
             else
             {
-                playerTurn = true;
-                ticks = 0;
-                SpawnSquares();
+                CheckMatching();
+                //if (squares.Count >= 1 && CheckMatching() >= 1)
+                //{
+                    if (cleared.Count > 0)
+                    {
+                        playerTurn = false;
+                        //while (cleared.Count > 0)
+                        for (int i = squares.Count - 1; i >= 0; i--)
+                        {
+                            if (cleared.Contains(i))
+                            {
+                                cleared.RemoveAt(cleared.IndexOf(i));
+                                squares.RemoveAt(i);
+                                Debug.Log("Removed tile #" + i);
+                            }
+                            timer = speed;
+                        }
+                    }
+                //}
+                else if (cleared.Count <= 0)
+                {
+                    playerTurn = true;
+                    ticks = 0;
+                    SpawnSquares();
+                }
             }
             DrawBoard();
             timer = speed;
