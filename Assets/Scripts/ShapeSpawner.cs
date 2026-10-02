@@ -26,6 +26,7 @@ public class ShapeSpawner : MonoBehaviour
     public TileBase[] tiles;
     public Tilemap tilemap;
     public Tilemap tilemap2;
+    public Interface game;
     InputAction moveAction;
     InputAction rotateLeft;
     InputAction rotateRight;
@@ -36,9 +37,16 @@ public class ShapeSpawner : MonoBehaviour
     float timer = 0f;
     float moveTimer = 0f;
     float moveTimer2 = 0f;
-    public float speed = 0.2f;
+    public float speed = 0.1f;
     public int sizex = 25;
     public int sizey = 25;
+
+    // SETTINGS VALUES
+    const int perLanded = 1;
+    const int perMatch = 5;
+    const int perExtraMatch = 2;
+    const float speedPerLevel = 0.5f;
+    const int speedPlusLevel = 3;
 
     public void ClearBoard()
     {
@@ -169,15 +177,15 @@ public class ShapeSpawner : MonoBehaviour
         }
         for (int i = 0; i < 6; i++)
         {
-            tilemap.SetTile(new Vector3Int(i * 3 + 36, 17, 0), tiles[queue[i].color + 1]);
             tilemap.SetTile(new Vector3Int(i * 3 + 36, 16, 0), tiles[queue[i].color + 1]);
+            tilemap.SetTile(new Vector3Int(i * 3 + 36, 15, 0), tiles[queue[i].color + 1]);
             switch (queue[i].direction)
             {
                 case 2:
-                    tilemap.SetTile(new Vector3Int(i * 3 + 36, 18, 0), tiles[queue[i].color + 1]);
+                    tilemap.SetTile(new Vector3Int(i * 3 + 36, 17, 0), tiles[queue[i].color + 1]);
                     break;
                 case 3:
-                    tilemap.SetTile(new Vector3Int(i * 3 + 37, 17, 0), tiles[queue[i].color + 1]);
+                    tilemap.SetTile(new Vector3Int(i * 3 + 37, 16, 0), tiles[queue[i].color + 1]);
                     break;
                 default:
                     break;
@@ -288,6 +296,11 @@ public class ShapeSpawner : MonoBehaviour
             }
         }
     }
+    public bool CheckAddClear(int color, Vector2Int pos)
+    {
+        if (toclear.Count == 0) return true;
+        else return squares[FindPos(pos)].color == color;
+    }
     public void CheckClear()
     {
         if (toclear.Count >= reqTiles)
@@ -310,7 +323,7 @@ public class ShapeSpawner : MonoBehaviour
             //if (FindPos(new Vector2Int(px + ct, py)) >= 0)
             //{
                 cc = squares[FindPos(new Vector2Int(px + ct, py))].color;
-                toclear.Add(FindPos(new Vector2Int(px + ct, py)));
+                if (CheckAddClear(cc, new Vector2Int(px + ct - 1, py))) toclear.Add(FindPos(new Vector2Int(px + ct, py)));
                 //Debug.Log("found tile #" + FindPos(new Vector2Int(px + ct, py)) + " across #" + ct);
             //}
             ct++;
@@ -328,7 +341,7 @@ public class ShapeSpawner : MonoBehaviour
             //if (FindPos(new Vector2Int(px, py + ct)) >= 0)
             //{
                 cc = squares[FindPos(new Vector2Int(px, py + ct))].color;
-                toclear.Add(FindPos(new Vector2Int(px, py + ct)));
+                if (CheckAddClear(cc, new Vector2Int(px, py + ct - 1))) toclear.Add(FindPos(new Vector2Int(px, py + ct)));
                 //Debug.Log("found tile #" + FindPos(new Vector2Int(px, py + ct)) + " down #" + ct);
             //}
             ct++;
@@ -341,13 +354,13 @@ public class ShapeSpawner : MonoBehaviour
         toclear.Clear();
         int ct = 0;
         int cc = color;
-        while (cc == color && cc >= 0 && ct <= 25)
+        while (cc == color && cc >= 0 && ct <= 25 && FindPos(new Vector2Int(px + ct, py - ct)) >= 0)
         {
-            if (FindPos(new Vector2Int(px + ct, py - ct)) >= 0)
-            {
+            //if (FindPos(new Vector2Int(px + ct, py - ct)) >= 0)
+            //{
                 cc = squares[FindPos(new Vector2Int(px + ct, py - ct))].color;
-                toclear.Add(FindPos(new Vector2Int(px + ct, py - ct)));
-            }
+                if (CheckAddClear(cc, new Vector2Int(px + ct - 1, py - ct + 1))) toclear.Add(FindPos(new Vector2Int(px + ct, py - ct)));
+            //}
             ct++;
         }
         CheckClear();
@@ -358,13 +371,13 @@ public class ShapeSpawner : MonoBehaviour
         toclear.Clear();
         int ct = 0;
         int cc = color;
-        while (cc == color && cc >= 0 && ct <= 25)
+        while (cc == color && cc >= 0 && ct <= 25 && FindPos(new Vector2Int(px + ct, py + ct)) >= 0)
         {
-            if (FindPos(new Vector2Int(px + ct, py + ct)) >= 0)
-            {
+            //if (FindPos(new Vector2Int(px + ct, py + ct)) >= 0)
+            //{
                 cc = squares[FindPos(new Vector2Int(px + ct, py + ct))].color;
-                toclear.Add(FindPos(new Vector2Int(px + ct, py + ct)));
-            }
+                if (CheckAddClear(cc, new Vector2Int(px + ct - 1, py + ct - 1))) toclear.Add(FindPos(new Vector2Int(px + ct, py + ct)));
+            //}
             ct++;
         }
         CheckClear();
@@ -391,8 +404,8 @@ public class ShapeSpawner : MonoBehaviour
                         //if (
                         CheckAcross(squares[find].color, dx, dy); // >= reqTiles; ||
                         CheckDown(squares[find].color, dx, dy); // >= reqTiles ||
-                        //CheckDiagonalLeft(squares[find].color, dx, dy); // >= reqTiles ||
-                        //CheckDiagonalRight(squares[find].color, dx, dy); // >= reqTiles
+                        CheckDiagonalLeft(squares[find].color, dx, dy); // >= reqTiles ||
+                        CheckDiagonalRight(squares[find].color, dx, dy); // >= reqTiles
                             //)
                         //{
                             Debug.Log(cleared.Count + " tiles found");
@@ -404,6 +417,22 @@ public class ShapeSpawner : MonoBehaviour
             if (cleared.Count >= reqTiles) break;
         }
         return cleared.Count;
+    }
+    public int CheckOutOfBounds()
+    {
+        int amount = 0;
+        for (int i = 0; i < squares.Count; i++)
+        {
+            if (squares[i].pos.x < 0 || squares[i].pos.y < 0 || squares[i].pos.x >= sizex || squares[i].pos.y >= sizey)
+            {
+                game.lives--;
+                squares.RemoveAt(i);
+                timer = 1f / speed;
+                amount++;
+                i--;
+            }
+        }
+        return amount;
     }
     public void SpawnSquares()
     {
@@ -440,6 +469,7 @@ public class ShapeSpawner : MonoBehaviour
             {
                 if (CheckCollision(k, 0))
                 {
+                    game.score += perLanded * game.level;
                     playerTurn = false;
                 }
             }
@@ -452,106 +482,115 @@ public class ShapeSpawner : MonoBehaviour
         moveAction = InputSystem.actions.FindAction("Move");
         rotateLeft = InputSystem.actions.FindAction("Rotate Left");
         rotateRight = InputSystem.actions.FindAction("Rotate Right");
+        game = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Interface>();
     }
     void Update()
     {
-        if (timer <= 0f)
+        if (game.lives > 0)
         {
-            if (FindMain() >= 0)
+            speed = (float)(game.level + speedPlusLevel) * speedPerLevel;
+            if (timer <= 0f)
             {
-                if (playerTurn) CheckControlledCollisions();
-                for (int k = 0; k < squares.Count; k++)
+                if (FindMain() >= 0)
                 {
-                    if (squares[k].controlled)
+                    if (playerTurn) CheckControlledCollisions();
+                    for (int k = 0; k < squares.Count; k++)
                     {
-                        if (!playerTurn)
+                        if (squares[k].controlled)
                         {
-                            squares[k].controlled = false;
-                            squares[k].main = false;
+                            if (!playerTurn)
+                            {
+                                squares[k].controlled = false;
+                                squares[k].main = false;
+                            }
+                            else squares[k].pos = MoveSquare(k, 0);
+                            if (squares[k].main) ticks++;
                         }
-                        else squares[k].pos = MoveSquare(k, 0);
-                        if (squares[k].main) ticks++;
                     }
                 }
+                else
+                {
+                    CheckMatching();
+                    //if (squares.Count >= 1 && CheckMatching() >= 1)
+                    //{
+                        if (cleared.Count > 0)
+                        {
+                            int clearBonus = perMatch;
+                            playerTurn = false;
+                            //while (cleared.Count > 0)
+                            for (int i = squares.Count - 1; i >= 0; i--)
+                            {
+                                if (cleared.Contains(i))
+                                {
+                                    game.score += clearBonus * game.level;
+                                    if (clearBonus == perMatch) game.score += perMatch;
+                                    clearBonus *= perExtraMatch;
+                                    cleared.RemoveAt(cleared.IndexOf(i));
+                                    squares.RemoveAt(i);
+                                    Debug.Log("Removed tile #" + i);
+                                }
+                                timer = 1f / speed;
+                            }
+                        }
+                    //}
+                    else if (CheckOutOfBounds() == 0 && cleared.Count <= 0)
+                    {
+                        playerTurn = true;
+                        ticks = 0;
+                        SpawnSquares();
+                    }
+                }
+                DrawBoard();
+                timer = 1f / speed;
             }
             else
             {
-                CheckMatching();
-                //if (squares.Count >= 1 && CheckMatching() >= 1)
-                //{
-                    if (cleared.Count > 0)
+                timer -= Time.deltaTime;
+            }
+            Vector2 moveValue = moveAction.ReadValue<Vector2>();
+            if (moveValue.x == 0 && moveValue.y == 0) moveTimer = 0f;
+            else
+            {
+                if (moveTimer <= 0f)
+                {
+                    int d = squares[FindMain()].direction;
+                    int d2 = 0;
+                    if (moveValue.y > 0)
                     {
-                        playerTurn = false;
-                        //while (cleared.Count > 0)
-                        for (int i = squares.Count - 1; i >= 0; i--)
-                        {
-                            if (cleared.Contains(i))
-                            {
-                                cleared.RemoveAt(cleared.IndexOf(i));
-                                squares.RemoveAt(i);
-                                Debug.Log("Removed tile #" + i);
-                            }
-                            timer = speed;
-                        }
+                        d2 = (2 - d) % 4;
+                        if (d != 0) MoveInput(d2);
                     }
-                //}
-                else if (cleared.Count <= 0)
-                {
-                    playerTurn = true;
-                    ticks = 0;
-                    SpawnSquares();
+                    if (moveValue.x > 0)
+                    {
+                        d2 = (3 - d) % 4;
+                        if (d != 1) MoveInput(d2);
+                    }
+                    if (moveValue.y < 0)
+                    {
+                        d2 = (0 - d) % 4;
+                        if (d != 2) MoveInput(d2);
+                    }
+                    if (moveValue.x < 0)
+                    {
+                        d2 = (1 - d) % 4;
+                        if (d != 3) MoveInput(d2);
+                    }
+                    if (d2 == 0) ticks++;
+                    DrawBoard();
                 }
+                moveTimer += Time.deltaTime;
             }
-            DrawBoard();
-            timer = speed;
-        }
-        else
-        {
-            timer -= Time.deltaTime;
-        }
-        Vector2 moveValue = moveAction.ReadValue<Vector2>();
-        if (moveValue.x == 0 && moveValue.y == 0) moveTimer = 0f;
-        else
-        {
-            if (moveTimer <= 0f)
+            if (!rotateLeft.IsPressed() && !rotateRight.IsPressed()) moveTimer2 = 0f;
+            else
             {
-                int d = squares[FindMain()].direction;
-                int d2 = 0;
-                if (moveValue.y > 0)
+                if (moveTimer2 <= 0f)
                 {
-                    d2 = (2 - d) % 4;
-                    if (d != 0) MoveInput(d2);
+                    if (rotateLeft.IsPressed()) RotateSquares(0);
+                    if (rotateRight.IsPressed()) RotateSquares(1);
+                    DrawBoard();
                 }
-                if (moveValue.x > 0)
-                {
-                    d2 = (3 - d) % 4;
-                    if (d != 1) MoveInput(d2);
-                }
-                if (moveValue.y < 0)
-                {
-                    d2 = (0 - d) % 4;
-                    if (d != 2) MoveInput(d2);
-                }
-                if (moveValue.x < 0)
-                {
-                    d2 = (1 - d) % 4;
-                    if (d != 3) MoveInput(d2);
-                }
-                if (d2 == 0) ticks++;
-                DrawBoard();
+                moveTimer2 += Time.deltaTime;
             }
-            moveTimer += Time.deltaTime;
-        }
-        if (!rotateLeft.IsPressed() && !rotateRight.IsPressed()) moveTimer2 = 0f;
-        else
-        {
-            if (moveTimer2 <= 0f)
-            {
-                if (rotateLeft.IsPressed()) RotateSquares(0);
-                if (rotateRight.IsPressed()) RotateSquares(1);
-                DrawBoard();
-            }
-            moveTimer2 += Time.deltaTime;
         }
     }
 }
