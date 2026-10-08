@@ -7800,7 +7800,7 @@ Transform:
   m_GameObject: {fileID: 1645709434}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -6.8, y: -3.5, z: 0}
+  m_LocalPosition: {x: -6.8, y: -3.5, z: -0.01}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -8333,6 +8333,15 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 6735524fd07355f48a0edf4d48027e12, type: 2}
   - {fileID: 11400000, guid: 869c6a2070cdbac48a4f40277524eb40, type: 2}
   - {fileID: 11400000, guid: c9eb62bd74e3429449911d70f4d3b9c7, type: 2}
+  categoryTiles:
+  - {fileID: 11400000, guid: 2c0b5902b23a00c46ae174c5be44abbc, type: 2}
+  - {fileID: 11400000, guid: a75283637c30ebe4e8023cec42605a85, type: 2}
+  - {fileID: 11400000, guid: 86e7af1362131c947bd8aa4d05fdd92c, type: 2}
+  - {fileID: 11400000, guid: 978b0a5657e70da439ff8886dd5ec395, type: 2}
+  - {fileID: 11400000, guid: 978b0a5657e70da439ff8886dd5ec395, type: 2}
+  - {fileID: 11400000, guid: 978b0a5657e70da439ff8886dd5ec395, type: 2}
+  - {fileID: 11400000, guid: 978b0a5657e70da439ff8886dd5ec395, type: 2}
+  - {fileID: 11400000, guid: 978b0a5657e70da439ff8886dd5ec395, type: 2}
   tilemap: {fileID: 1586996534}
   tilemap2: {fileID: 560876835}
   game: {fileID: 0}

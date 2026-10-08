@@ -24,6 +24,7 @@ public class ShapeSpawner : MonoBehaviour
     public List<int> toclear;
     public List<int> cleared;
     public TileBase[] tiles;
+    public TileBase[] categoryTiles;
     public Tilemap tilemap;
     public Tilemap tilemap2;
     public Interface game;
@@ -159,33 +160,46 @@ public class ShapeSpawner : MonoBehaviour
                 }
             }
             int colorPick = UnityEngine.Random.Range(0, colors.Count);
-            queue.Add(new Shapes {color = colors[colorPick], category = 0, direction = UnityEngine.Random.Range(1, 4) });
+            queue.Add(new Shapes {color = colors[colorPick], category = UnityEngine.Random.Range(1, 100) >= 90 ? UnityEngine.Random.Range(0, 5) : 0, direction = UnityEngine.Random.Range(1, 4) });
             colors.RemoveAt(colorPick);
         }
     }
     public void DrawBoard()
     {
         tilemap.ClearAllTiles();
+        tilemap2.ClearAllTiles();
         for (int i = 0; i < squares.Count; i++)
         {
             Vector3Int ps = new Vector3Int(squares[i].pos.x, squares[i].pos.y, 0);
             if (squares[i].color < 0)
             {
-                if (tilemap.GetTile(ps) != null) tilemap.SetTile(ps, null);
+                if (tilemap.GetTile(ps) != null)
+                {
+                    tilemap.SetTile(ps, null);
+                    tilemap2.SetTile(ps, null);
+                }
             }
-            else tilemap.SetTile(ps, tiles[squares[i].color + 1]);
+            else 
+            {
+                tilemap.SetTile(ps, tiles[squares[i].color + 1]);
+                tilemap2.SetTile(ps, categoryTiles[(squares[i].category == 0) ? squares[i].direction : squares[i].category + 3]);
+            }
         }
         for (int i = 0; i < 6; i++)
         {
             tilemap.SetTile(new Vector3Int(i * 3 + 36, 16, 0), tiles[queue[i].color + 1]);
             tilemap.SetTile(new Vector3Int(i * 3 + 36, 15, 0), tiles[queue[i].color + 1]);
+            tilemap2.SetTile(new Vector3Int(i * 3 + 36, 16, 0), categoryTiles[(queue[i].category == 0) ? (queue.Count + i) % 4 : queue[i].category + 3]);
+            tilemap2.SetTile(new Vector3Int(i * 3 + 36, 15, 0), categoryTiles[(queue.Count + i) % 4]);
             switch (queue[i].direction)
             {
                 case 2:
                     tilemap.SetTile(new Vector3Int(i * 3 + 36, 17, 0), tiles[queue[i].color + 1]);
+                    tilemap2.SetTile(new Vector3Int(i * 3 + 36, 17, 0), categoryTiles[(queue.Count + i) % 4]);
                     break;
                 case 3:
                     tilemap.SetTile(new Vector3Int(i * 3 + 37, 16, 0), tiles[queue[i].color + 1]);
+                    tilemap2.SetTile(new Vector3Int(i * 3 + 37, 16, 0), categoryTiles[(queue.Count + i) % 4]);
                     break;
                 default:
                     break;
@@ -441,10 +455,11 @@ public class ShapeSpawner : MonoBehaviour
         {
             int color = queue[0].color;
             int shape = queue[0].direction; // 1 = two bar, 2 = three bar, 3 = l shape
+            int cat = queue[0].category; // 0 = standard, 1 = rotating, 2 = spade, 3 = drill, 4 = sparkle
             int dir = queue.Count % 4; // 0 = down, 1 = left, 2 = up, 3 = right
             Vector2Int[] positions = { new Vector2Int(12, 29), new Vector2Int(29, 12), new Vector2Int(12, -5), new Vector2Int(-5, 12) };
 
-            squares.Add(new Shapes { controlled = true, main = true, pos = positions[dir], color = color, category = 0, direction = dir });
+            squares.Add(new Shapes { controlled = true, main = true, pos = positions[dir], color = color, category = cat, direction = dir });
             squares.Add(new Shapes { controlled = true, main = false, pos = new Vector2Int(positions[dir].x + 1, positions[dir].y), color = color, category = 0, direction = dir });
 
             switch (shape) {
