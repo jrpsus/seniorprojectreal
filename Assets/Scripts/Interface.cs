@@ -7,6 +7,8 @@ public class Interface : MonoBehaviour
     public int score = 0;
     public int level = 1;
     public int lives = 5;
+    public int spades = 0;
+    public int drills = 0;
     public int nextLevel = 200;
     const int levelPercentIncrease = 50;
     public TextMeshProUGUI[] text;
@@ -21,6 +23,8 @@ public class Interface : MonoBehaviour
         text[0].text = score.ToString();
         text[1].text = level.ToString();
         text[2].text = lives.ToString();
+        text[3].text = spades.ToString();
+        text[4].text = drills.ToString();
 
         if (score >= nextLevel)
         {

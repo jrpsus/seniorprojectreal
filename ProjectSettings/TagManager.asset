@@ -8,6 +8,7 @@ TagManager:
   - Bottom
   - Top
   - Canvas
+  - Popup
   layers:
   - Default
   - TransparentFX

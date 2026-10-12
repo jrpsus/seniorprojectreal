@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using System.Drawing;
 
 [Serializable] public class Shapes
@@ -28,6 +29,7 @@ public class ShapeSpawner : MonoBehaviour
     public Tilemap tilemap;
     public Tilemap tilemap2;
     public Interface game;
+    public GameObject popup;
     InputAction moveAction;
     InputAction rotateLeft;
     InputAction rotateRight;
@@ -455,7 +457,7 @@ public class ShapeSpawner : MonoBehaviour
         {
             int color = queue[0].color;
             int shape = queue[0].direction; // 1 = two bar, 2 = three bar, 3 = l shape
-            int cat = queue[0].category; // 0 = standard, 1 = rotating, 2 = spade, 3 = drill, 4 = sparkle
+            int cat = queue[0].category; // 0 = standard, 1 = spade, 2 = drill, 3 = sparkle
             int dir = queue.Count % 4; // 0 = down, 1 = left, 2 = up, 3 = right
             Vector2Int[] positions = { new Vector2Int(12, 29), new Vector2Int(29, 12), new Vector2Int(12, -5), new Vector2Int(-5, 12) };
 
@@ -476,6 +478,38 @@ public class ShapeSpawner : MonoBehaviour
         }
         
     }
+    public void CheckAbility(int category)
+    {
+        switch (category)
+        {
+            case 1:
+
+                break;
+            case 2:
+
+                break;
+            case 3:
+                int rng = UnityEngine.Random.Range(1, 5);
+                switch (rng)
+                {
+                    case 1:
+                        game.spades++;
+                        break;
+                    case 2:
+                        game.drills++;
+                        break;
+                    case 3:
+                        game.lives++;
+                        break;
+                    default:
+                        game.score += (int)Math.Pow(game.level, 3);
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+    }
     public void CheckControlledCollisions()
     {
         for (int k = 0; k < squares.Count; k++)
@@ -490,6 +524,15 @@ public class ShapeSpawner : MonoBehaviour
             }
         }
     }
+
+    public void PauseGame()
+    {
+
+    }
+    public void ExitToMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
+    }
     void Start()
     {
         ClearBoard();
@@ -498,11 +541,13 @@ public class ShapeSpawner : MonoBehaviour
         rotateLeft = InputSystem.actions.FindAction("Rotate Left");
         rotateRight = InputSystem.actions.FindAction("Rotate Right");
         game = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Interface>();
+        popup = GameObject.FindGameObjectWithTag("Popup");
     }
     void Update()
     {
         if (game.lives > 0)
         {
+            Time.timeScale = popup.GetComponent<PopupScript>().isActiveAndEnabled ? 0.0f : 1.0f;
             speed = (float)(game.level + speedPlusLevel) * speedPerLevel;
             if (timer <= 0f)
             {
