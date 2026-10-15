@@ -115,6 +115,16 @@
                     "interactions": "",
                     "initialStateCheck": false,
                     "priority": 0
+                },
+                {
+                    "name": "Hard Drop",
+                    "type": "Button",
+                    "id": "c91c5080-6c98-42f5-9f80-1bb921e73f80",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false,
+                    "priority": 0
                 }
             ],
             "bindings": [
@@ -522,6 +532,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Rotate Right",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "03fea397-3ceb-4e87-80dc-6d104f528afd",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Hard Drop",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

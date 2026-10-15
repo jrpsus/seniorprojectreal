@@ -30,9 +30,11 @@ public class ShapeSpawner : MonoBehaviour
     public Tilemap tilemap2;
     public Interface game;
     public GameObject popup;
+    public PopupScript pp;
     InputAction moveAction;
     InputAction rotateLeft;
     InputAction rotateRight;
+    InputAction hardDrop;
     bool playerTurn = false;
     const int totalColors = 5;
     const int reqTiles = 4;
@@ -40,6 +42,8 @@ public class ShapeSpawner : MonoBehaviour
     float timer = 0f;
     float moveTimer = 0f;
     float moveTimer2 = 0f;
+    bool canHardDrop = false;
+    bool hardDropped = false;
     public float speed = 0.1f;
     public int sizex = 25;
     public int sizey = 25;
@@ -524,14 +528,26 @@ public class ShapeSpawner : MonoBehaviour
             }
         }
     }
-
+    public void OpenPopup(int id)
+    {
+        for (int i = 0; i < pp.popups.Length; i++)
+        {
+            if (pp.subactive[i]) return; // dont open if another popup is already active
+        }
+        pp.subactive[id] = true;
+        popup.SetActive(true);
+    }
     public void PauseGame()
     {
 
     }
+    public void Restart()
+    {
+        SceneManager.LoadScene("Game");
+    }
     public void ExitToMenu()
     {
-        SceneManager.LoadScene("MainMenu");
+        SceneManager.LoadScene("Main Menu");
     }
     void Start()
     {
@@ -540,16 +556,18 @@ public class ShapeSpawner : MonoBehaviour
         moveAction = InputSystem.actions.FindAction("Move");
         rotateLeft = InputSystem.actions.FindAction("Rotate Left");
         rotateRight = InputSystem.actions.FindAction("Rotate Right");
+        hardDrop = InputSystem.actions.FindAction("Hard Drop");
         game = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Interface>();
         popup = GameObject.FindGameObjectWithTag("Popup");
+        pp = popup.GetComponent<PopupScript>();
     }
     void Update()
     {
         if (game.lives > 0)
         {
-            Time.timeScale = popup.GetComponent<PopupScript>().isActiveAndEnabled ? 0.0f : 1.0f;
+            Time.timeScale = pp.isActiveAndEnabled ? 0.0f : 1.0f;
             speed = (float)(game.level + speedPlusLevel) * speedPerLevel;
-            if (timer <= 0f)
+            if (timer <= 0f || hardDropped)
             {
                 if (FindMain() >= 0)
                 {
@@ -570,32 +588,35 @@ public class ShapeSpawner : MonoBehaviour
                 }
                 else
                 {
+                    hardDropped = false;
                     CheckMatching();
                     //if (squares.Count >= 1 && CheckMatching() >= 1)
                     //{
-                        if (cleared.Count > 0)
+                    if (cleared.Count > 0)
+                    {
+                        int clearBonus = perMatch;
+                        playerTurn = false;
+                        //while (cleared.Count > 0)
+                        for (int i = squares.Count - 1; i >= 0; i--)
                         {
-                            int clearBonus = perMatch;
-                            playerTurn = false;
-                            //while (cleared.Count > 0)
-                            for (int i = squares.Count - 1; i >= 0; i--)
+                            if (cleared.Contains(i))
                             {
-                                if (cleared.Contains(i))
-                                {
-                                    game.score += clearBonus * game.level;
-                                    if (clearBonus == perMatch) game.score += perMatch;
-                                    clearBonus *= perExtraMatch;
-                                    cleared.RemoveAt(cleared.IndexOf(i));
-                                    squares.RemoveAt(i);
-                                    Debug.Log("Removed tile #" + i);
-                                }
-                                timer = 1f / speed;
+                                game.score += clearBonus * game.level;
+                                if (clearBonus == perMatch) game.score += perMatch;
+                                clearBonus *= perExtraMatch;
+                                cleared.RemoveAt(cleared.IndexOf(i));
+                                squares.RemoveAt(i);
+                                Debug.Log("Removed tile #" + i);
                             }
+                            timer = 1f / speed;
                         }
+                    }
                     //}
                     else if (CheckOutOfBounds() == 0 && cleared.Count <= 0)
                     {
                         playerTurn = true;
+                        canHardDrop = false; // so you cant just hold it down
+                        hardDropped = false;
                         ticks = 0;
                         SpawnSquares();
                     }
@@ -608,6 +629,8 @@ public class ShapeSpawner : MonoBehaviour
                 timer -= Time.deltaTime;
             }
             Vector2 moveValue = moveAction.ReadValue<Vector2>();
+            if (!hardDrop.IsPressed()) canHardDrop = true;
+            if (hardDrop.IsPressed() && FindMain() >= 0 && canHardDrop) hardDropped = true;
             if (moveValue.x == 0 && moveValue.y == 0) moveTimer = 0f;
             else
             {
@@ -652,5 +675,6 @@ public class ShapeSpawner : MonoBehaviour
                 moveTimer2 += Time.deltaTime;
             }
         }
+        else OpenPopup(2);
     }
 }

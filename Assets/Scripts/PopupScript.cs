@@ -6,6 +6,7 @@ public class PopupScript : MonoBehaviour
 {
     public bool active = true;
     public bool[] subactive;
+    public GameObject[] popups;
     public int startingLevel = 1;
     public int startingLives = 5;
     //public ShapeSpawner game;
@@ -35,6 +36,10 @@ public class PopupScript : MonoBehaviour
             game.lives = startingLives;
             subactive[0] = false;
         }
+        if (subactive[1])
+        {
+            subactive[1] = false;
+        }
         active = false;
         gameObject.SetActive(false);
     }
@@ -42,5 +47,9 @@ public class PopupScript : MonoBehaviour
     {
         text[0].text = "Starting Level: " + startingLevel;
         text[1].text = "Starting Lives: " + startingLives;
+        for (int i = 0; i < popups.Length; i++)
+        {
+            popups[i].SetActive(subactive[i]);
+        }
     }
 }

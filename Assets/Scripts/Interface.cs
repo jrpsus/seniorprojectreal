@@ -7,8 +7,8 @@ public class Interface : MonoBehaviour
     public int score = 0;
     public int level = 1;
     public int lives = 5;
-    public int spades = 0;
-    public int drills = 0;
+    public int spades = 3;
+    public int drills = 3;
     public int nextLevel = 200;
     const int levelPercentIncrease = 50;
     public TextMeshProUGUI[] text;
