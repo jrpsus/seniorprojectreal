@@ -487,10 +487,10 @@ public class ShapeSpawner : MonoBehaviour
         switch (category)
         {
             case 1:
-
+                game.spades++;
                 break;
             case 2:
-
+                game.drills++;
                 break;
             case 3:
                 int rng = UnityEngine.Random.Range(1, 5);
