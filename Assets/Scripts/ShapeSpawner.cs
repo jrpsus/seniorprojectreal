@@ -35,6 +35,9 @@ public class ShapeSpawner : MonoBehaviour
     InputAction rotateLeft;
     InputAction rotateRight;
     InputAction hardDrop;
+    InputAction spade;
+    InputAction drill;
+    InputAction pause;
     bool playerTurn = false;
     const int totalColors = 5;
     const int reqTiles = 4;
@@ -166,7 +169,7 @@ public class ShapeSpawner : MonoBehaviour
                 }
             }
             int colorPick = UnityEngine.Random.Range(0, colors.Count);
-            queue.Add(new Shapes {color = colors[colorPick], category = UnityEngine.Random.Range(1, 100) >= 90 ? UnityEngine.Random.Range(0, 5) : 0, direction = UnityEngine.Random.Range(1, 4) });
+            queue.Add(new Shapes {color = colors[colorPick], category = UnityEngine.Random.Range(1, 10 + game.level) == 1 ? UnityEngine.Random.Range(0, 5) : 0, direction = UnityEngine.Random.Range(1, 4) });
             colors.RemoveAt(colorPick);
         }
     }
@@ -514,6 +517,54 @@ public class ShapeSpawner : MonoBehaviour
                 break;
         }
     }
+    public void UseAbility(int ability)
+    {
+        if (FindMain() >= 0)
+        {
+            switch (ability)
+            {
+                case 1:
+                    if (game.spades <= 0) break;
+                    ClearAllInRadius(squares[FindMain()].pos, 3);
+                    game.spades--;
+                    break;
+                case 2:
+                    if (game.drills <= 0) break;
+                    ClearAllInRowAndColumn(squares[FindMain()].pos);
+                    game.drills--;
+                    break;
+                default:
+                    break;
+            }
+        }
+        
+    }
+    public void ClearAllInRadius(Vector2 pos, int rad)
+    {
+        for (int k = 0; k < squares.Count; k++)
+        {
+            if (Math.Abs(squares[k].pos.x - pos.x) <= rad && Math.Abs(squares[k].pos.y - pos.y) <= rad)
+            {
+                CheckAbility(squares[k].category);
+                squares.RemoveAt(k);
+                game.score += perMatch * game.level;
+                k--;
+            }
+        }
+    }
+    public void ClearAllInRowAndColumn(Vector2 pos)
+    {
+        for (int k = 0; k < squares.Count; k++)
+        {
+            if (squares[k].pos.x == pos.x || squares[k].pos.y == pos.y)
+            {
+                CheckAbility(squares[k].category);
+                squares.RemoveAt(k);
+                game.score += perMatch * game.level;
+                k--;
+            }
+        }
+    }
     public void CheckControlledCollisions()
     {
         for (int k = 0; k < squares.Count; k++)
@@ -539,7 +590,8 @@ public class ShapeSpawner : MonoBehaviour
     }
     public void PauseGame()
     {
-
+        if (pp.subactive[1]) pp.ClosePopup();
+        else OpenPopup(1);
     }
     public void Restart()
     {
@@ -557,6 +609,9 @@ public class ShapeSpawner : MonoBehaviour
         rotateLeft = InputSystem.actions.FindAction("Rotate Left");
         rotateRight = InputSystem.actions.FindAction("Rotate Right");
         hardDrop = InputSystem.actions.FindAction("Hard Drop");
+        spade = InputSystem.actions.FindAction("Spade");
+        drill = InputSystem.actions.FindAction("Drill");
+        pause = InputSystem.actions.FindAction("Pause");
         game = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Interface>();
         popup = GameObject.FindGameObjectWithTag("Popup");
         pp = popup.GetComponent<PopupScript>();
@@ -604,6 +659,7 @@ public class ShapeSpawner : MonoBehaviour
                                 game.score += clearBonus * game.level;
                                 if (clearBonus == perMatch) game.score += perMatch;
                                 clearBonus *= perExtraMatch;
+                                CheckAbility(squares[i].category);
                                 cleared.RemoveAt(cleared.IndexOf(i));
                                 squares.RemoveAt(i);
                                 Debug.Log("Removed tile #" + i);
@@ -663,13 +719,16 @@ public class ShapeSpawner : MonoBehaviour
                 }
                 moveTimer += Time.deltaTime;
             }
-            if (!rotateLeft.IsPressed() && !rotateRight.IsPressed()) moveTimer2 = 0f;
+            if (!rotateLeft.IsPressed() && !rotateRight.IsPressed() && !pause.IsPressed() && !spade.IsPressed() && !drill.IsPressed()) moveTimer2 = 0f;
             else
             {
                 if (moveTimer2 <= 0f)
                 {
                     if (rotateLeft.IsPressed()) RotateSquares(0);
                     if (rotateRight.IsPressed()) RotateSquares(1);
+                    if (pause.IsPressed()) PauseGame();
+                    if (spade.IsPressed()) UseAbility(1);
+                    if (drill.IsPressed()) UseAbility(2);
                     DrawBoard();
                 }
                 moveTimer2 += Time.deltaTime;
