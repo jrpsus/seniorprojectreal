@@ -31,6 +31,7 @@ public class ShapeSpawner : MonoBehaviour
     public Interface game;
     public GameObject popup;
     public PopupScript pp;
+    public GameObject[] particle;
     InputAction moveAction;
     InputAction rotateLeft;
     InputAction rotateRight;
@@ -41,15 +42,20 @@ public class ShapeSpawner : MonoBehaviour
     bool playerTurn = false;
     const int totalColors = 5;
     const int reqTiles = 4;
+    public int clears = 0;
+    public int combo = 0;
     int ticks = 0;
     float timer = 0f;
     float moveTimer = 0f;
     float moveTimer2 = 0f;
+    //float pauseTimer = 0f;
     bool canHardDrop = false;
     bool hardDropped = false;
     public float speed = 0.1f;
     public int sizex = 25;
     public int sizey = 25;
+    public float countdown = 3.5f;
+    public float countdownAnimation = 3.0f;
 
     // SETTINGS VALUES
     const int perLanded = 1;
@@ -57,6 +63,23 @@ public class ShapeSpawner : MonoBehaviour
     const int perExtraMatch = 2;
     const float speedPerLevel = 0.5f;
     const int speedPlusLevel = 3;
+    public Vector3[] positions;
+    public AudioSource audio;
+    public AudioSource soundaudio;
+    public AudioClip[] sfx;
+    /* 0 place tile group
+     * 1 
+     * 2 life lost
+     * 3 slider up
+     * 4 slider down
+     * 5-10 combo
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     */
 
     public void ClearBoard()
     {
@@ -455,6 +478,11 @@ public class ShapeSpawner : MonoBehaviour
                 i--;
             }
         }
+        if (amount >= 1)
+        {
+            game.SpawnText(new UnityEngine.Color(0.9f, 0.2f, 0.2f), "-" + amount + " lives", game.text[2].rectTransform.position + Vector3.left * 250);
+            audio.PlayOneShot(sfx[2]);
+        }
         return amount;
     }
     public void SpawnSquares()
@@ -541,29 +569,37 @@ public class ShapeSpawner : MonoBehaviour
     }
     public void ClearAllInRadius(Vector2 pos, int rad)
     {
+        int total = 0;
         for (int k = 0; k < squares.Count; k++)
         {
             if (Math.Abs(squares[k].pos.x - pos.x) <= rad && Math.Abs(squares[k].pos.y - pos.y) <= rad)
             {
                 CheckAbility(squares[k].category);
+                Instantiate(particle[0], new Vector3(-6.8f + squares[k].pos.x / 3.5f, -3.5f + squares[k].pos.y / 3.5f, 0), new Quaternion(0, 180, 0, 0), gameObject.transform);
                 squares.RemoveAt(k);
                 game.score += perMatch * game.level;
                 k--;
+                total++;
             }
         }
+        if (total > 0) audio.PlayOneShot(sfx[0]);
     }
     public void ClearAllInRowAndColumn(Vector2 pos)
     {
+        int total = 0;
         for (int k = 0; k < squares.Count; k++)
         {
             if (squares[k].pos.x == pos.x || squares[k].pos.y == pos.y)
             {
                 CheckAbility(squares[k].category);
+                Instantiate(particle[0], new Vector3(-6.8f + squares[k].pos.x / 3.5f, -3.5f + squares[k].pos.y / 3.5f, 0), new Quaternion(0, 180, 0, 0), gameObject.transform);
                 squares.RemoveAt(k);
                 game.score += perMatch * game.level;
                 k--;
+                total++;
             }
         }
+        if (total > 0) audio.PlayOneShot(sfx[0]);
     }
     public void CheckControlledCollisions()
     {
@@ -579,14 +615,24 @@ public class ShapeSpawner : MonoBehaviour
             }
         }
     }
+    public void ParticleMouse(int positionIndex)
+    {
+        Instantiate(particle[1], positions[positionIndex], new Quaternion(0, 180, 0, 0), gameObject.transform);
+    }
     public void OpenPopup(int id)
     {
-        for (int i = 0; i < pp.popups.Length; i++)
+        if (countdown <= 0f)
         {
-            if (pp.subactive[i]) return; // dont open if another popup is already active
+            for (int i = 0; i < pp.popups.Length; i++)
+            {
+                if (pp.subactive[i]) return; // dont open if another popup is already active
+            }
+            pp.subactive[id] = true;
+            game.transitionOut2 = false;
+            audio.PlayOneShot(pp.sfx[2]);
+            popup.SetActive(true);
         }
-        pp.subactive[id] = true;
-        popup.SetActive(true);
+        
     }
     public void PauseGame()
     {
@@ -595,11 +641,17 @@ public class ShapeSpawner : MonoBehaviour
     }
     public void Restart()
     {
-        SceneManager.LoadScene("Game");
+        game.transitionPos = 12;
+        game.transitionOut = false;
+        game.nextScene = "Game";
+        //SceneManager.LoadScene("Game");
     }
     public void ExitToMenu()
     {
-        SceneManager.LoadScene("Main Menu");
+        game.transitionPos = 12;
+        game.transitionOut = false;
+        game.nextScene = "Main Menu";
+        //SceneManager.LoadScene("Main Menu");
     }
     void Start()
     {
@@ -615,14 +667,15 @@ public class ShapeSpawner : MonoBehaviour
         game = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Interface>();
         popup = GameObject.FindGameObjectWithTag("Popup");
         pp = popup.GetComponent<PopupScript>();
+        audio.Play();
     }
     void Update()
     {
         if (game.lives > 0)
         {
-            Time.timeScale = pp.isActiveAndEnabled ? 0.0f : 1.0f;
+            Time.timeScale = game.transitionScale >= 0.01f ? 0.0f : 1.0f;
             speed = (float)(game.level + speedPlusLevel) * speedPerLevel;
-            if (timer <= 0f || hardDropped)
+            if (countdown <= 0f && (timer <= 0f || hardDropped))
             {
                 if (FindMain() >= 0)
                 {
@@ -633,6 +686,7 @@ public class ShapeSpawner : MonoBehaviour
                         {
                             if (!playerTurn)
                             {
+                                if (squares[k].main) audio.PlayOneShot(sfx[0]);
                                 squares[k].controlled = false;
                                 squares[k].main = false;
                             }
@@ -657,9 +711,11 @@ public class ShapeSpawner : MonoBehaviour
                             if (cleared.Contains(i))
                             {
                                 game.score += clearBonus * game.level;
-                                if (clearBonus == perMatch) game.score += perMatch;
+                                if (clearBonus == perMatch) game.score += perMatch * (1 + combo);
                                 clearBonus *= perExtraMatch;
                                 CheckAbility(squares[i].category);
+                                Instantiate(particle[0], new Vector3(-6.8f + squares[i].pos.x / 3.5f, -3.5f + squares[i].pos.y / 3.5f, 0), new Quaternion(0, 180, 0, 0), gameObject.transform);
+                                clears++;
                                 cleared.RemoveAt(cleared.IndexOf(i));
                                 squares.RemoveAt(i);
                                 Debug.Log("Removed tile #" + i);
@@ -670,6 +726,15 @@ public class ShapeSpawner : MonoBehaviour
                     //}
                     else if (CheckOutOfBounds() == 0 && cleared.Count <= 0)
                     {
+                        Debug.Log(clears + " clears");
+                        if (clears > 0)
+                        {
+                            combo++;
+                            if (combo >= 1) game.SpawnText(new UnityEngine.Color(0.1f, 0.9f, 0.5f), "x" + combo + " combo", game.text[0].rectTransform.position + Vector3.left * 250);
+                            audio.PlayOneShot(sfx[(combo >= 6) ? 10 : combo + 4]);
+                            clears = 0;
+                        }
+                        else if (!playerTurn) combo = 0;
                         playerTurn = true;
                         canHardDrop = false; // so you cant just hold it down
                         hardDropped = false;
@@ -682,7 +747,35 @@ public class ShapeSpawner : MonoBehaviour
             }
             else
             {
-                timer -= Time.deltaTime;
+                if (countdown >= 0f)
+                {
+                    countdown -= Time.deltaTime;
+                    if (countdown <= countdownAnimation)
+                    {
+                        if (countdownAnimation > 2.0f && countdownAnimation <= 3.0f) {
+                            game.SpawnBigText(UnityEngine.Color.white, "3", new Vector3(960f, 540f, 0f));
+                            audio.PlayOneShot(sfx[11]);
+                        }
+                        else if (countdownAnimation > 1.0f && countdownAnimation <= 2.0f)
+                        {
+                            game.SpawnBigText(UnityEngine.Color.white, "2", new Vector3(960f, 540f, 0f));
+                            audio.PlayOneShot(sfx[11]);
+                        }
+                        else if (countdownAnimation > 0.0f && countdownAnimation <= 1.0f)
+                        {
+                            game.SpawnBigText(UnityEngine.Color.white, "1", new Vector3(960f, 540f, 0f));
+                            audio.PlayOneShot(sfx[11]);
+                        }
+                        else if (countdownAnimation <= 0.0f)
+                        {
+                            game.SpawnBigText(UnityEngine.Color.white, "GO", new Vector3(960f, 540f, 0f));
+                            audio.PlayOneShot(sfx[11]);
+                            countdownAnimation = -99999999f;
+                        }
+                        countdownAnimation -= 1.0f;
+                    }
+                }
+                else timer -= Time.deltaTime;
             }
             Vector2 moveValue = moveAction.ReadValue<Vector2>();
             if (!hardDrop.IsPressed()) canHardDrop = true;
@@ -731,9 +824,11 @@ public class ShapeSpawner : MonoBehaviour
                     if (drill.IsPressed()) UseAbility(2);
                     DrawBoard();
                 }
-                moveTimer2 += Time.deltaTime;
+                moveTimer2 += Time.unscaledDeltaTime;
             }
         }
         else OpenPopup(2);
+        audio.volume = game.musicVolume;
+        soundaudio.volume = game.soundVolume;
     }
 }

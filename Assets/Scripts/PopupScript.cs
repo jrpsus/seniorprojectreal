@@ -13,6 +13,8 @@ public class PopupScript : MonoBehaviour
     public Interface game;
     public TextMeshProUGUI[] text;
     public Slider[] slider;
+    public AudioSource audio;
+    public AudioClip[] sfx;
     void Start()
     {
         game = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Interface>();
@@ -22,10 +24,12 @@ public class PopupScript : MonoBehaviour
     }
     public void SetStartingLevel()
     {
+        if (startingLevel != (int)slider[0].value) audio.PlayOneShot(sfx[(startingLevel < (int)slider[0].value) ? 0 : 1]);
         startingLevel = (int)slider[0].value;
     }
     public void SetStartingLives()
     {
+        if (startingLives != (int)slider[1].value) audio.PlayOneShot(sfx[(startingLives < (int)slider[1].value) ? 0 : 1]);
         startingLives = (int)slider[1].value;
     }
     public void ClosePopup()
@@ -40,11 +44,15 @@ public class PopupScript : MonoBehaviour
         {
             subactive[1] = false;
         }
+        audio.PlayOneShot(sfx[3]);
         active = false;
-        gameObject.SetActive(false);
+        game.transitionOut2 = true;
+        //gameObject.SetActive(false);
     }
     void Update()
     {
+        game.transitionScale += ((game.transitionOut2 ? 0 : 1) - game.transitionScale) / 6;
+        transform.localScale = new Vector3(game.transitionScale, game.transitionScale, 1);
         text[0].text = "Starting Level: " + startingLevel;
         text[1].text = "Starting Lives: " + startingLives;
         for (int i = 0; i < popups.Length; i++)
