@@ -19,6 +19,7 @@ public class Interface : MonoBehaviour
     public TextMeshProUGUI[] text;
     public RectTransform[] transition;
     public PopupScript popup;
+    public ShapeSpawner shapespawner;
     public AudioSource audio;
     public AudioClip[] sfx;
     public float transitionPos = 6;
@@ -29,6 +30,7 @@ public class Interface : MonoBehaviour
     void Start()
     {
         popup = GameObject.FindGameObjectWithTag("Popup").GetComponent<PopupScript>();
+        shapespawner = GameObject.FindGameObjectWithTag("ShapeSpawner").GetComponent<ShapeSpawner>();
     }
     public void setMusicVolume(float v)
     {
@@ -80,7 +82,10 @@ public class Interface : MonoBehaviour
             nextLevel /= 100;
             if (level % 3 == 0)
             {
-
+                if (shapespawner.queue[shapespawner.queue.Count - 1].category == 0)
+                {
+                    shapespawner.queue[shapespawner.queue.Count - 1].category = UnityEngine.Random.Range(1, 4);
+                }
             }
             if (level % 5 == 0)
             {

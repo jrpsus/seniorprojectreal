@@ -5,6 +5,8 @@ public class ParticleScript : MonoBehaviour
     public ParticleSystem particle;
     public float time;
     public float timeLimit;
+    public float speed = 10f;
+    public Vector3 destination;
     void Start()
     {
         particle.Play();
@@ -14,9 +16,20 @@ public class ParticleScript : MonoBehaviour
     void Update()
     {
         time += Time.unscaledDeltaTime;
-        if (time > timeLimit)
+        if (destination == Vector3.zero)
         {
-            Destroy(gameObject);
+            if (time > timeLimit)
+            {
+                Destroy(gameObject);
+            }
+        }
+        else
+        {
+            transform.position = Vector3.MoveTowards(transform.position, destination, speed * time * Time.unscaledDeltaTime);
+            if (Vector3.Distance(transform.position, destination) <= 0.5f)
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }

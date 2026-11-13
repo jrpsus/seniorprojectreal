@@ -39,11 +39,14 @@ public class ShapeSpawner : MonoBehaviour
     InputAction spade;
     InputAction drill;
     InputAction pause;
+    public GameObject lifelostscreen;
+    public CanvasRenderer lifelost;
     bool playerTurn = false;
     const int totalColors = 5;
     const int reqTiles = 4;
     public int clears = 0;
     public int combo = 0;
+    int tempCategory = 0;
     int ticks = 0;
     float timer = 0f;
     float moveTimer = 0f;
@@ -51,6 +54,7 @@ public class ShapeSpawner : MonoBehaviour
     //float pauseTimer = 0f;
     bool canHardDrop = false;
     bool hardDropped = false;
+    public float das = 0f;
     public float speed = 0.1f;
     public int sizex = 25;
     public int sizey = 25;
@@ -219,19 +223,21 @@ public class ShapeSpawner : MonoBehaviour
         }
         for (int i = 0; i < 6; i++)
         {
+            int drawDir = Math.Abs((i - queue.Count) % 4);
+            //Debug.Log(drawDir);
             tilemap.SetTile(new Vector3Int(i * 3 + 36, 16, 0), tiles[queue[i].color + 1]);
             tilemap.SetTile(new Vector3Int(i * 3 + 36, 15, 0), tiles[queue[i].color + 1]);
-            tilemap2.SetTile(new Vector3Int(i * 3 + 36, 16, 0), categoryTiles[(queue[i].category == 0) ? (queue.Count + i) % 4 : queue[i].category + 3]);
-            tilemap2.SetTile(new Vector3Int(i * 3 + 36, 15, 0), categoryTiles[(queue.Count + i) % 4]);
+            tilemap2.SetTile(new Vector3Int(i * 3 + 36, 16, 0), categoryTiles[(queue[i].category == 0) ? drawDir : queue[i].category + 3]);
+            tilemap2.SetTile(new Vector3Int(i * 3 + 36, 15, 0), categoryTiles[drawDir]);
             switch (queue[i].direction)
             {
                 case 2:
                     tilemap.SetTile(new Vector3Int(i * 3 + 36, 17, 0), tiles[queue[i].color + 1]);
-                    tilemap2.SetTile(new Vector3Int(i * 3 + 36, 17, 0), categoryTiles[(queue.Count + i) % 4]);
+                    tilemap2.SetTile(new Vector3Int(i * 3 + 36, 17, 0), categoryTiles[drawDir]);
                     break;
                 case 3:
                     tilemap.SetTile(new Vector3Int(i * 3 + 37, 16, 0), tiles[queue[i].color + 1]);
-                    tilemap2.SetTile(new Vector3Int(i * 3 + 37, 16, 0), categoryTiles[(queue.Count + i) % 4]);
+                    tilemap2.SetTile(new Vector3Int(i * 3 + 37, 16, 0), categoryTiles[drawDir]);
                     break;
                 default:
                     break;
@@ -480,6 +486,8 @@ public class ShapeSpawner : MonoBehaviour
         }
         if (amount >= 1)
         {
+            lifelostscreen.SetActive(true);
+            lifelost.SetAlpha(0.6f);
             game.SpawnText(new UnityEngine.Color(0.9f, 0.2f, 0.2f), "-" + amount + " lives", game.text[2].rectTransform.position + Vector3.left * 250);
             audio.PlayOneShot(sfx[2]);
         }
@@ -515,6 +523,7 @@ public class ShapeSpawner : MonoBehaviour
     }
     public void CheckAbility(int category)
     {
+        tempCategory = category;
         switch (category)
         {
             case 1:
@@ -529,15 +538,19 @@ public class ShapeSpawner : MonoBehaviour
                 {
                     case 1:
                         game.spades++;
+                        tempCategory = 1;
                         break;
                     case 2:
                         game.drills++;
+                        tempCategory = 2;
                         break;
                     case 3:
                         game.lives++;
+                        tempCategory = 3;
                         break;
                     default:
                         game.score += (int)Math.Pow(game.level, 3);
+                        tempCategory = 4;
                         break;
                 }
                 break;
@@ -575,6 +588,10 @@ public class ShapeSpawner : MonoBehaviour
             if (Math.Abs(squares[k].pos.x - pos.x) <= rad && Math.Abs(squares[k].pos.y - pos.y) <= rad)
             {
                 CheckAbility(squares[k].category);
+                if (tempCategory > 0 && tempCategory < 4)
+                {
+                    Instantiate(particle[tempCategory + 1], new Vector3(-6.8f + squares[k].pos.x / 3.5f, -3.5f + squares[k].pos.y / 3.5f, -0.5f), new Quaternion(0, 180, 0, 0), gameObject.transform);
+                }
                 Instantiate(particle[0], new Vector3(-6.8f + squares[k].pos.x / 3.5f, -3.5f + squares[k].pos.y / 3.5f, 0), new Quaternion(0, 180, 0, 0), gameObject.transform);
                 squares.RemoveAt(k);
                 game.score += perMatch * game.level;
@@ -592,6 +609,10 @@ public class ShapeSpawner : MonoBehaviour
             if (squares[k].pos.x == pos.x || squares[k].pos.y == pos.y)
             {
                 CheckAbility(squares[k].category);
+                if (tempCategory > 0 && tempCategory < 4)
+                {
+                    Instantiate(particle[tempCategory + 1], new Vector3(-6.8f + squares[k].pos.x / 3.5f, -3.5f + squares[k].pos.y / 3.5f, -0.5f), new Quaternion(0, 180, 0, 0), gameObject.transform);
+                }
                 Instantiate(particle[0], new Vector3(-6.8f + squares[k].pos.x / 3.5f, -3.5f + squares[k].pos.y / 3.5f, 0), new Quaternion(0, 180, 0, 0), gameObject.transform);
                 squares.RemoveAt(k);
                 game.score += perMatch * game.level;
@@ -668,9 +689,20 @@ public class ShapeSpawner : MonoBehaviour
         popup = GameObject.FindGameObjectWithTag("Popup");
         pp = popup.GetComponent<PopupScript>();
         audio.Play();
+        lifelostscreen = GameObject.FindGameObjectWithTag("LifeLost");
+        lifelost = lifelostscreen.GetComponent<CanvasRenderer>();
+        lifelost.SetAlpha(0f);
     }
     void Update()
     {
+        if (lifelost.GetAlpha() >= 0f)
+        {
+            lifelost.SetAlpha(lifelost.GetAlpha() - Time.unscaledDeltaTime);
+        }
+        else
+        {
+            lifelostscreen.SetActive(false);
+        }
         if (game.lives > 0)
         {
             Time.timeScale = game.transitionScale >= 0.01f ? 0.0f : 1.0f;
@@ -679,6 +711,10 @@ public class ShapeSpawner : MonoBehaviour
             {
                 if (FindMain() >= 0)
                 {
+                    if (hardDropped)
+                    {
+                        Instantiate(particle[5], new Vector3(-6.8f + squares[FindMain()].pos.x / 3.5f, -3.5f + squares[FindMain()].pos.y / 3.5f, -0.5f), new Quaternion(0, 180, 0, 0), gameObject.transform);
+                    }
                     if (playerTurn) CheckControlledCollisions();
                     for (int k = 0; k < squares.Count; k++)
                     {
@@ -714,6 +750,10 @@ public class ShapeSpawner : MonoBehaviour
                                 if (clearBonus == perMatch) game.score += perMatch * (1 + combo);
                                 clearBonus *= perExtraMatch;
                                 CheckAbility(squares[i].category);
+                                if (tempCategory > 0 && tempCategory < 4)
+                                {
+                                    Instantiate(particle[tempCategory + 1], new Vector3(-6.8f + squares[i].pos.x / 3.5f, -3.5f + squares[i].pos.y / 3.5f, -0.5f), new Quaternion(0, 180, 0, 0), gameObject.transform);
+                                }
                                 Instantiate(particle[0], new Vector3(-6.8f + squares[i].pos.x / 3.5f, -3.5f + squares[i].pos.y / 3.5f, 0), new Quaternion(0, 180, 0, 0), gameObject.transform);
                                 clears++;
                                 cleared.RemoveAt(cleared.IndexOf(i));
@@ -780,10 +820,14 @@ public class ShapeSpawner : MonoBehaviour
             Vector2 moveValue = moveAction.ReadValue<Vector2>();
             if (!hardDrop.IsPressed()) canHardDrop = true;
             if (hardDrop.IsPressed() && FindMain() >= 0 && canHardDrop) hardDropped = true;
-            if (moveValue.x == 0 && moveValue.y == 0) moveTimer = 0f;
+            if (moveValue.x == 0 && moveValue.y == 0)
+            {
+                das = 0f;
+                moveTimer = 0f;
+            }
             else
             {
-                if (moveTimer <= 0f)
+                if (moveTimer >= das)
                 {
                     int d = squares[FindMain()].direction;
                     int d2 = 0;
@@ -809,6 +853,7 @@ public class ShapeSpawner : MonoBehaviour
                     }
                     if (d2 == 0) ticks++;
                     DrawBoard();
+                    das += 0.2f;
                 }
                 moveTimer += Time.deltaTime;
             }
